@@ -4,31 +4,44 @@
 
 ---
 
-**Last Updated:** May 30, 2026
+**Last Updated:** May 31, 2026
 
 ## Status
 
-Steps 1-4 complete. Parser reads xlsx files, extracts structured data, maps cell fill colors to status. Query engine supports filtering, sorting, searching, and rollups. Tested against 32-row test dataset matching the real SOT schema.
+Steps 1-4 complete (parser + query engine). Flask web viewer built and tested.
 
-Working against test data. Real SOT file not yet integrated (Urmila updating the xlsx: removing old columns F, I, and LINE BREAK rows).
+Local website runs at localhost:5000. Shows SOT data in a table with:
+- Rollup bars (Desktop status, Mobile status, Priority counts)
+- Dropdown filters (Area, Priority, DRI, Desktop status, Mobile status)
+- Text search
+- Sortable column headers (click to sort)
+- Color-coded status cells
+- Reload button to refresh data from the xlsx
+
+Working against test data (32 rows). Real SOT file not yet integrated.
 
 ## Active
 
-1. **Step 5: Define tool specifications.** Urmila drives this. What questions should the agent answer? What parameters matter? What should the output look like? This is the product design step.
+**Strategy change:** Three-step approach before agent work.
+1. **Flask local website (done).** Parse SOT, view in browser, filter, sort, rollup.
+2. **Power Apps + SharePoint.** Read SOT directly from SharePoint. Learn Microsoft tools.
+3. **Discuss SharePoint hosting.** Internal hosting for team/leadership access.
+
+Next immediate step: Urmila runs the Flask app on her machine for the first time.
 
 ## Blocked
 
-- Real SOT file needed for color calibration (exact hex values for green/yellow/orange).
+- Real SOT file needed for color calibration (exact hex values).
 - "Issue" column: full header name and content type to confirm.
 
-## Next (after Step 5)
+## Next (after Flask validation)
 
-- Step 6: Build the agent (Claude API + tool use)
-- Step 7: Conversational loop
-- Step 8: MCP server
+- Urmila tests the Flask app locally with real SOT data
+- Step 2: Power Apps connected to SharePoint
+- Step 5: Tool definitions (agent work, later)
 
 ## Deferred
 
+- Agent (Steps 5-8): tool definitions, Claude API, conversational loop, MCP
 - Generalize to any xlsx file
 - Write-back to xlsx
-- Web viewer (optional visual layer for team/leadership)

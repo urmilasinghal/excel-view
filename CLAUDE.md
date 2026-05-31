@@ -82,6 +82,13 @@ source venv/bin/activate      # Linux/Mac
 venv\Scripts\activate          # Windows
 pip install -r requirements.txt
 
+# Run the local website
+python app.py
+# Opens at http://localhost:5000
+
+# Run with a specific file
+python app.py --file "path/to/file.xlsx" --sheet "Sheet Name"
+
 # Test parser
 cd src
 python parser.py ../data/test_sot.xlsx
@@ -98,11 +105,10 @@ python query.py ../data/test_sot.xlsx
 |------|------------------|
 | [docs/design.md](docs/design.md) | Full design: final state, 8-step plan, data schema, color mapping, decisions log |
 | [NOW.md](NOW.md) | Current step, what's next, what's blocked |
+| [app.py](app.py) | Flask web server. Run this to start the local website. |
+| [templates/index.html](templates/index.html) | HTML template: table, filters, rollups, color-coded status cells |
 | [src/parser.py](src/parser.py) | Steps 1-3: reads xlsx, extracts data, maps cell colors to status |
 | [src/query.py](src/query.py) | Step 4: filter, sort, search, rollup functions |
-| `src/tools.py` | Step 5: tool definitions (Urmila designs these) |
-| `src/agent.py` | Steps 6-7: agent with Claude API + conversational loop |
-| `src/mcp_server.py` | Step 8: MCP server |
 | [data/test_sot.xlsx](data/test_sot.xlsx) | Test data: 32 rows matching real SOT schema and colors |
 
 ---
@@ -113,8 +119,8 @@ Durable rules from the design sessions. Not session notes.
 
 **Product**
 
-- Agent-first, not web-viewer-first. Urmila's use case is natural language queries, not UI filters.
-- The web viewer is optional, not on the critical path. It can layer on top of the agent later.
+- Agent-first was the original plan. Strategy shifted: build a visible local website first (Flask), then Power Apps + SharePoint, then agent work. Seeing the data in a browser comes before NL queries.
+- The web viewer is no longer optional. It is the current step. Power Apps replaces Flask for Step 2 (SharePoint integration).
 - Each phase adds one layer. Nothing gets rewritten.
 - Status is encoded in cell fill color, not in a text column. The parser must read formatting, not just values.
 
@@ -143,7 +149,9 @@ Eight steps from zero to working agent. See [docs/design.md](docs/design.md) for
 | 2 | Extract structured data | Claude | Done |
 | 3 | Read cell colors, map to status | Claude | Done |
 | 4 | Query functions (filter, sort, rollup) | Claude | Done |
-| 5 | Define tool specifications | Urmila | Next |
-| 6 | Build agent (Claude API + tool use) | Together | Pending |
-| 7 | Conversational loop | Together | Pending |
-| 8 | MCP server | Together | Pending |
+| Flask | Local website at localhost:5000 | Claude | Done |
+| Power Apps | Connect to SharePoint, learn Microsoft tools | Urmila | Next |
+| 5 | Define tool specifications | Urmila | Future |
+| 6 | Build agent (Claude API + tool use) | Together | Future |
+| 7 | Conversational loop | Together | Future |
+| 8 | MCP server | Together | Future |

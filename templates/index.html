@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ sheet_name }} - Excel View</title>
+    <style>
+        /* --- Base --- */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: "Segoe UI", -apple-system, sans-serif;
+            font-size: 14px;
+            color: #323130;
+            background: #FAF9F8;
+        }
+
+        /* --- Header --- */
+        .header {
+            background: #0078D4;
+            color: white;
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h1 {
+            font-size: 20px;
+            font-weight: 600;
+        }
+        .header-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+        .btn {
+            padding: 6px 16px;
+            border: none;
+            border-radius: 4px;
+            font-size: 13px;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .btn-light {
+            background: rgba(255,255,255,0.2);
+            color: white;
+        }
+        .btn-light:hover { background: rgba(255,255,255,0.3); }
+        .btn-primary {
+            background: #0078D4;
+            color: white;
+            border: 1px solid #0078D4;
+        }
+        .btn-primary:hover { background: #106EBE; }
+        .btn-secondary {
+            background: white;
+            color: #323130;
+            border: 1px solid #8A8886;
+        }
+        .btn-secondary:hover { background: #F3F2F1; }
+
+        /* --- Rollups --- */
+        .rollup-section {
+            padding: 16px 24px;
+            background: white;
+            border-bottom: 1px solid #EDEBE9;
+            display: flex;
+            gap: 32px;
+            flex-wrap: wrap;
+        }
+        .rollup-group h3 {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #605E5C;
+            margin-bottom: 8px;
+        }
+        .rollup-pills {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .pill {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .pill .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        /* --- Filters --- */
+        .filter-bar {
+            padding: 12px 24px;
+            background: white;
+            border-bottom: 1px solid #EDEBE9;
+            display: flex;
+            gap: 12px;
+            align-items: flex-end;
+            flex-wrap: wrap;
+        }
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .filter-group label {
+            font-size: 11px;
+            font-weight: 600;
+            color: #605E5C;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .filter-group select,
+        .filter-group input {
+            padding: 6px 10px;
+            border: 1px solid #8A8886;
+            border-radius: 4px;
+            font-size: 13px;
+            font-family: inherit;
+            background: white;
+            min-width: 130px;
+        }
+        .filter-group select:focus,
+        .filter-group input:focus {
+            outline: none;
+            border-color: #0078D4;
+            box-shadow: 0 0 0 1px #0078D4;
+        }
+        .filter-actions {
+            display: flex;
+            gap: 8px;
+            padding-bottom: 1px;
+        }
+
+        /* --- Count bar --- */
+        .count-bar {
+            padding: 8px 24px;
+            font-size: 13px;
+            color: #605E5C;
+            background: #F3F2F1;
+            border-bottom: 1px solid #EDEBE9;
+        }
+        .count-bar strong { color: #323130; }
+
+        /* --- Table --- */
+        .table-container {
+            padding: 0 24px 24px;
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 0;
+            background: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+        thead th {
+            background: #F3F2F1;
+            padding: 10px 12px;
+            text-align: left;
+            font-size: 12px;
+            font-weight: 600;
+            color: #605E5C;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            border-bottom: 2px solid #EDEBE9;
+            white-space: nowrap;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+        thead th a {
+            color: #605E5C;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        thead th a:hover { color: #0078D4; }
+        .sort-arrow { font-size: 10px; }
+
+        tbody td {
+            padding: 8px 12px;
+            border-bottom: 1px solid #EDEBE9;
+            font-size: 13px;
+            vertical-align: top;
+        }
+        tbody tr:hover { background: #F3F2F1; }
+
+        /* Status cell styling */
+        .status-parity { background: #E2EFDA; }
+        .status-by-design { background: #FFF2CC; }
+        .status-in-progress { background: #FCE4D6; }
+        .status-gap { background: #FADBD8; }
+
+        .status-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        /* Notes column wider */
+        .col-notes { max-width: 300px; }
+        .col-feature { min-width: 200px; }
+
+        /* --- Footer --- */
+        .footer {
+            padding: 12px 24px;
+            font-size: 12px;
+            color: #A19F9D;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <div class="header">
+        <h1>Entra-MSA Feature Parity SOT</h1>
+        <div class="header-actions">
+            <span style="font-size: 13px; opacity: 0.8;">{{ sheet_name }}</span>
+            <a href="/reload" class="btn btn-light">Reload Data</a>
+        </div>
+    </div>
+
+    <!-- Rollups -->
+    <div class="rollup-section">
+        <div class="rollup-group">
+            <h3>Desktop Status</h3>
+            <div class="rollup-pills">
+                {% for status in ["Parity", "Gap", "By Design", "In Progress"] %}
+                <span class="pill" style="background: {{ status_colors.get(status, '#F3F2F1') }};">
+                    <span class="dot" style="background: {{ status_pill_colors.get(status, '#999') }};"></span>
+                    {{ status }}: {{ desktop_rollup.get(status, 0) }}
+                </span>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="rollup-group">
+            <h3>Mobile Status</h3>
+            <div class="rollup-pills">
+                {% for status in ["Parity", "Gap", "By Design", "In Progress"] %}
+                <span class="pill" style="background: {{ status_colors.get(status, '#F3F2F1') }};">
+                    <span class="dot" style="background: {{ status_pill_colors.get(status, '#999') }};"></span>
+                    {{ status }}: {{ mobile_rollup.get(status, 0) }}
+                </span>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="rollup-group">
+            <h3>By Priority</h3>
+            <div class="rollup-pills">
+                {% for priority in ["P0", "P1", "P2"] %}
+                <span class="pill" style="background: #E8E8E8;">
+                    {{ priority }}: {{ priority_rollup.get(priority, 0) }}
+                </span>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <form class="filter-bar" method="get" action="/">
+        {% for col in filter_columns %}
+        <div class="filter-group">
+            <label>{{ col.replace('_status', ' Status').replace('Desktop Timeline', 'Desktop').replace('Mobile Timeline', 'Mobile') }}</label>
+            <select name="{{ col.replace(' ', '_') }}">
+                <option value="All">All</option>
+                {% for val in unique_values.get(col, []) %}
+                <option value="{{ val }}" {% if active_filters.get(col) == val %}selected{% endif %}>{{ val }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        {% endfor %}
+
+        <div class="filter-group">
+            <label>Search</label>
+            <input type="text" name="search" value="{{ search_text }}" placeholder="Search features...">
+        </div>
+
+        <div class="filter-actions">
+            <button type="submit" class="btn btn-primary">Apply</button>
+            <a href="/" class="btn btn-secondary">Clear</a>
+        </div>
+    </form>
+
+    <!-- Count -->
+    <div class="count-bar">
+        Showing <strong>{{ filtered_count }}</strong> of <strong>{{ total }}</strong> features
+        {% if active_filters or search_text %}
+            (filtered)
+        {% endif %}
+    </div>
+
+    <!-- Table -->
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    {% set column_labels = {
+                        "Area": "Area",
+                        "Section": "Section",
+                        "Feature": "Feature",
+                        "Priority": "Priority",
+                        "DRI": "DRI",
+                        "Desktop Timeline": "Desktop Date",
+                        "Desktop Timeline_status": "Desktop Status",
+                        "Mobile Timeline": "Mobile Date",
+                        "Mobile Timeline_status": "Mobile Status",
+                        "Issue": "Issue",
+                        "MSA Premium Notes": "Notes"
+                    } %}
+                    {% for col in display_columns %}
+                    <th>
+                        {% set new_desc = 'true' if (sort_col == col and not sort_desc) else 'false' %}
+                        {% set arrow = '' %}
+                        {% if sort_col == col %}
+                            {% set arrow = ' &#9650;' if not sort_desc else ' &#9660;' %}
+                        {% endif %}
+                        <a href="?sort={{ col.replace(' ', '_') }}&desc={{ new_desc }}{% for k, v in active_filters.items() %}&{{ k.replace(' ', '_') }}={{ v }}{% endfor %}{% if search_text %}&search={{ search_text }}{% endif %}">
+                            {{ column_labels.get(col, col) }}
+                            {% if sort_col == col %}
+                            <span class="sort-arrow">{{ arrow | safe }}</span>
+                            {% endif %}
+                        </a>
+                    </th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in data %}
+                <tr>
+                    {% for col in display_columns %}
+                    {% set val = row.get(col, '') %}
+                    {% set val_str = val if val is not none else '' %}
+
+                    {% if col.endswith('_status') %}
+                        {% set status_class = '' %}
+                        {% if val_str == 'Parity' %}{% set status_class = 'status-parity' %}
+                        {% elif val_str == 'By Design' %}{% set status_class = 'status-by-design' %}
+                        {% elif val_str == 'In Progress' %}{% set status_class = 'status-in-progress' %}
+                        {% elif val_str == 'Gap' %}{% set status_class = 'status-gap' %}
+                        {% endif %}
+                        <td class="{{ status_class }}">
+                            <span class="status-badge">{{ val_str }}</span>
+                        </td>
+                    {% elif col == 'Feature' %}
+                        <td class="col-feature">{{ val_str }}</td>
+                    {% elif col == 'MSA Premium Notes' %}
+                        <td class="col-notes">{{ val_str }}</td>
+                    {% else %}
+                        <td>{{ val_str }}</td>
+                    {% endif %}
+
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        Excel View - Feature Parity SOT Viewer
+    </div>
+
+</body>
+</html>

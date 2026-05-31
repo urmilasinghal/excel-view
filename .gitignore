@@ -5,3 +5,4 @@ venv/
 data/*.xlsx
 !data/test_sot.xlsx
 logs/
+instance/

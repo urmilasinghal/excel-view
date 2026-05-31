@@ -1,30 +1,41 @@
 # Excel View
 
-**Excel query agent.** Reads an xlsx file, understands its structure and color-coded status, and answers natural language questions. Starting with the Entra-MSA Feature Parity SOT, then generalizing to any Excel file. End state: an MCP server that any AI assistant can plug into.
+**Excel query agent.** Reads an xlsx file, understands its structure and color-coded status, and shows it in a browser. Starting with the Entra-MSA Feature Parity SOT. Future: Power Apps + SharePoint, then a conversational agent and MCP server.
 
-## Architecture
+## Quick Start
 
-```
-xlsx file (color-coded status in cell fills)
-    |
-Parser (openpyxl, reads values + cell formatting)
-    |
-Query Engine (filter, sort, search, rollup)
-    |
-Tool Definitions (structured function specs)
-    |
-Agent (Claude API + tool use)
-    |
-MCP Server (expose tools for any AI client)
+```bash
+# First time setup
+python -m venv venv
+venv\Scripts\activate          # Windows
+pip install -r requirements.txt
+
+# Run the website
+python app.py
 ```
 
-Eight build steps, bottom to top. See [docs/design.md](docs/design.md) for the full plan.
+Open your browser to **http://localhost:5000**. That's it.
+
+## What You See
+
+- **Rollup bars** at the top: counts by Desktop status, Mobile status, and Priority
+- **Filter dropdowns**: Area, Priority, DRI, Desktop status, Mobile status
+- **Search box**: find features by name or notes
+- **Sortable columns**: click any column header to sort
+- **Color-coded status cells**: Parity (green), By Design (yellow), In Progress (orange), Gap (red)
+- **Reload button**: re-reads the xlsx file without restarting
+
+## Using Your Own Data
+
+```bash
+python app.py --file "C:\path\to\your\file.xlsx" --sheet "Sheet Name"
+```
 
 ## Orientation
 
 - [CLAUDE.md](CLAUDE.md) -- operator manual for Claude Code sessions
-- [NOW.md](NOW.md) -- current step and what's next
-- [docs/design.md](docs/design.md) -- full design: final state, data schema, color mapping, decisions log
+- [NOW.md](NOW.md) -- current priorities and what's next
+- [docs/design.md](docs/design.md) -- full design: final state, build plan, data schema, decisions
 
 ## Repo Layout
 
@@ -33,43 +44,22 @@ excel-view/
 ├── CLAUDE.md              Operator manual for Claude Code
 ├── NOW.md                 Current priorities
 ├── README.md              This file
-├── requirements.txt       Python dependencies
+├── requirements.txt       Python dependencies (openpyxl, flask)
+├── app.py                 Flask web server (run this)
+├── templates/
+│   └── index.html         Web page template
 ├── data/
-│   └── test_sot.xlsx      Test data (32 rows, SOT schema, color-coded)
+│   └── test_sot.xlsx      Test data (32 rows, SOT schema)
 ├── docs/
 │   └── design.md          Full design document
 └── src/
-    ├── parser.py           Steps 1-3: read xlsx, extract data, map colors
-    ├── query.py            Step 4: filter, sort, search, rollup
-    ├── tools.py            Step 5: tool definitions (pending)
-    ├── agent.py            Steps 6-7: agent + conversational loop (pending)
-    └── mcp_server.py       Step 8: MCP server (pending)
+    ├── parser.py           Reads xlsx, extracts data, maps cell colors to status
+    └── query.py            Filter, sort, search, rollup functions
 ```
-
-## Setup
-
-```bash
-python -m venv venv
-source venv/bin/activate      # Linux/Mac
-venv\Scripts\activate          # Windows
-pip install -r requirements.txt
-```
-
-## Quick Test
-
-```bash
-cd src
-python parser.py ../data/test_sot.xlsx
-python query.py ../data/test_sot.xlsx
-```
-
-## Current Status
-
-Steps 1-4 complete (parser + query engine). Step 5 (tool definitions) is next. See [NOW.md](NOW.md).
 
 ## Data Schema
 
-The Feature Parity SOT has 9 columns. Status is encoded in cell fill colors, not in a text column.
+The Feature Parity SOT has 9 columns. Status is encoded in cell fill colors.
 
 | Column | Type |
 |--------|------|
@@ -84,3 +74,13 @@ The Feature Parity SOT has 9 columns. Status is encoded in cell fill colors, not
 | MSA Premium Notes | Text |
 
 Color mapping: green = Parity, yellow = By Design, orange = In Progress, no fill = Gap.
+
+## Build Path
+
+| Step | What | Status |
+|------|------|--------|
+| 1-3 | Parse xlsx, extract data, read cell colors | Done |
+| 4 | Query engine (filter, sort, rollup) | Done |
+| Flask | Local website with filters and rollups | Done |
+| Power Apps | Connect to SharePoint, Microsoft tools | Next |
+| 5-8 | Tool definitions, agent, conversational loop, MCP | Future |
