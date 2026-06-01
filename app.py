@@ -11,6 +11,7 @@ Usage:
 
 import sys
 import os
+from datetime import datetime, date
 
 # Allow importing from src/ folder
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
@@ -21,21 +22,34 @@ from query import filter_data, sort_data, rollup, search
 
 app = Flask(__name__)
 
+
+@app.template_filter("cell")
+def cell_filter(val):
+    """Render a cell value for display. Dates become YYYY-MM-DD, None becomes ''."""
+    if val is None:
+        return ""
+    if isinstance(val, (datetime, date)):
+        return val.strftime("%Y-%m-%d")
+    return val
+
 # --- Configuration ---
-DATA_FILE = os.path.join(os.path.dirname(__file__), "data", "test_sot.xlsx")
+DATA_FILE = os.path.join(os.path.dirname(__file__), "data", "ParitySOT.xlsx")
 SHEET_NAME = "MSA Premium Detail"
 
 # --- Load data once at startup ---
 data = parse_sheet(DATA_FILE, SHEET_NAME)
 schema = get_schema(DATA_FILE, SHEET_NAME)
 
+# The real SOT has one status column (text), not per-timeline color.
+ISSUE_COLUMN = "Issue (add link) 🔗"
+
 # Columns to show filters for
 FILTER_COLUMNS = [
     "Area",
+    "Section",
     "Priority",
     "DRI",
-    "Desktop Timeline_status",
-    "Mobile Timeline_status",
+    "status",
 ]
 
 # Columns to display in the table
@@ -45,11 +59,10 @@ DISPLAY_COLUMNS = [
     "Feature",
     "Priority",
     "DRI",
+    "status",
     "Desktop Timeline",
-    "Desktop Timeline_status",
     "Mobile Timeline",
-    "Mobile Timeline_status",
-    "Issue",
+    ISSUE_COLUMN,
     "MSA Premium Notes",
 ]
 
@@ -105,8 +118,7 @@ def index():
         filtered = sort_data(filtered, by=sort_col, descending=sort_desc)
 
     # --- Rollups ---
-    desktop_rollup = rollup(filtered, "Desktop Timeline_status")
-    mobile_rollup = rollup(filtered, "Mobile Timeline_status")
+    status_rollup = rollup(filtered, "status")
     priority_rollup = rollup(filtered, "Priority")
 
     # --- Unique values for filter dropdowns ---
@@ -131,8 +143,8 @@ def index():
         unique_values=unique_values,
         filter_columns=FILTER_COLUMNS,
         display_columns=DISPLAY_COLUMNS,
-        desktop_rollup=desktop_rollup,
-        mobile_rollup=mobile_rollup,
+        issue_column=ISSUE_COLUMN,
+        status_rollup=status_rollup,
         priority_rollup=priority_rollup,
         status_colors=STATUS_COLORS,
         status_pill_colors=STATUS_PILL_COLORS,

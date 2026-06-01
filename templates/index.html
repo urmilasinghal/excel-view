@@ -235,23 +235,12 @@
     <!-- Rollups -->
     <div class="rollup-section">
         <div class="rollup-group">
-            <h3>Desktop Status</h3>
+            <h3>Status</h3>
             <div class="rollup-pills">
                 {% for status in ["Parity", "Gap", "By Design", "In Progress"] %}
                 <span class="pill" style="background: {{ status_colors.get(status, '#F3F2F1') }};">
                     <span class="dot" style="background: {{ status_pill_colors.get(status, '#999') }};"></span>
-                    {{ status }}: {{ desktop_rollup.get(status, 0) }}
-                </span>
-                {% endfor %}
-            </div>
-        </div>
-        <div class="rollup-group">
-            <h3>Mobile Status</h3>
-            <div class="rollup-pills">
-                {% for status in ["Parity", "Gap", "By Design", "In Progress"] %}
-                <span class="pill" style="background: {{ status_colors.get(status, '#F3F2F1') }};">
-                    <span class="dot" style="background: {{ status_pill_colors.get(status, '#999') }};"></span>
-                    {{ status }}: {{ mobile_rollup.get(status, 0) }}
+                    {{ status }}: {{ status_rollup.get(status, 0) }}
                 </span>
                 {% endfor %}
             </div>
@@ -272,7 +261,7 @@
     <form class="filter-bar" method="get" action="/">
         {% for col in filter_columns %}
         <div class="filter-group">
-            <label>{{ col.replace('_status', ' Status').replace('Desktop Timeline', 'Desktop').replace('Mobile Timeline', 'Mobile') }}</label>
+            <label>{{ {'Area': 'Area', 'Section': 'Section', 'Priority': 'Priority', 'DRI': 'DRI', 'status': 'Status'}.get(col, col) }}</label>
             <select name="{{ col.replace(' ', '_') }}">
                 <option value="All">All</option>
                 {% for val in unique_values.get(col, []) %}
@@ -312,11 +301,10 @@
                         "Feature": "Feature",
                         "Priority": "Priority",
                         "DRI": "DRI",
+                        "status": "Status",
                         "Desktop Timeline": "Desktop Date",
-                        "Desktop Timeline_status": "Desktop Status",
                         "Mobile Timeline": "Mobile Date",
-                        "Mobile Timeline_status": "Mobile Status",
-                        "Issue": "Issue",
+                        issue_column: "Issue",
                         "MSA Premium Notes": "Notes"
                     } %}
                     {% for col in display_columns %}
@@ -341,9 +329,9 @@
                 <tr>
                     {% for col in display_columns %}
                     {% set val = row.get(col, '') %}
-                    {% set val_str = val if val is not none else '' %}
+                    {% set val_str = val | cell %}
 
-                    {% if col.endswith('_status') %}
+                    {% if col == 'status' or col.endswith('_status') %}
                         {% set status_class = '' %}
                         {% if val_str == 'Parity' %}{% set status_class = 'status-parity' %}
                         {% elif val_str == 'By Design' %}{% set status_class = 'status-by-design' %}

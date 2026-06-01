@@ -18,20 +18,30 @@ import openpyxl
 from typing import Optional
 
 
-# Color-to-status mapping.
-# Keys are hex color codes (uppercase, no #). Values are status strings.
-# "no_fill" is a special key for cells with no background color.
+# --- Status source (active) ---
+# In the real SOT, status lives as TEXT in this column on MSA Premium Detail.
+# Values: Parity, In Progress, Gap, By Design.
+STATUS_COLUMN = "MCA Web MSA Gap"
+
+# Separator rows (visual dividers in the sheet, not real features). Skipped.
+# Matched against the first column, case-insensitive.
+SEPARATOR_MARKERS = {"LINE BREAK"}
+
+# --- Color mapping (STAGED, not active yet) ---
+# Urmila wants to move the status source from text to cell color soon, once the
+# SOT is fully color-coded and consistent. See NOW.md. The color meaning is
+# column-specific (the same hex means different things in different columns):
+#   Column F (MCA Web MSA Gap): light green = Parity, yellow = In Progress,
+#                               orange = Gap, blue = By Design
+#   Columns G/H (Timeline):     orange (FFC000) = In Progress
+# Exact hexes to be finalized once the teammate finishes coloring. Known so far:
+#   E2EFDA = light green (Parity in column F)
+#   FFC000 = orange (In Progress in Timeline columns)
 COLOR_STATUS_MAP = {
-    "92D050": "Parity",
-    "00B050": "Parity",
-    "FFFF00": "By Design",
-    "FFC000": "In Progress",
-    "FF8C00": "In Progress",
+    "E2EFDA": "Parity",   # column F light green (partial today)
+    "FFC000": "In Progress",  # Timeline orange
     "no_fill": "Gap",
 }
-
-# Columns where color encodes status
-COLOR_STATUS_COLUMNS = ["Desktop Timeline", "Mobile Timeline"]
 
 # Default tolerance for color matching (0-255 per channel)
 COLOR_TOLERANCE = 30
@@ -48,69 +58,69 @@ def parse_workbook(filepath: str) -> list[str]:
 def parse_sheet(filepath: str, sheet_name: str = "MSA Premium Detail") -> list[dict]:
     """
     Parse a single sheet from the workbook into a list of row dicts.
-    
+
     Each row dict has:
-    - One key per column header, with the cell value
-    - For color-status columns (Desktop/Mobile Timeline):
-      - "{column}_status" key with the mapped status string
-      - "{column}_color" key with the raw hex color (for debugging)
-    
-    Skips empty rows and rows where all data cells are empty.
+    - One key per column header, with the (whitespace-stripped) cell value
+    - A normalized "status" key, read from the text column STATUS_COLUMN
+
+    Trailing columns with no header are dropped. Empty rows are skipped.
     """
     wb = openpyxl.load_workbook(filepath, data_only=True)
-    
+
     if sheet_name not in wb.sheetnames:
         wb.close()
         raise ValueError(f"Sheet '{sheet_name}' not found. Available: {wb.sheetnames}")
-    
+
     ws = wb[sheet_name]
-    
-    # Step 1: Read headers from row 1
-    headers = []
-    for col in range(1, ws.max_column + 1):
-        val = ws.cell(row=1, column=col).value
-        if val is not None:
-            headers.append(str(val).strip())
-        else:
-            headers.append(f"Column_{col}")
-    
-    # Identify which column indices are color-status columns
-    color_col_indices = []
-    for i, h in enumerate(headers):
-        if h in COLOR_STATUS_COLUMNS:
-            color_col_indices.append(i)
-    
-    # Steps 2-3: Read data rows, extract values and colors
+
+    headers = _read_headers(ws)
+
     rows = []
     for row_idx in range(2, ws.max_row + 1):
         row_data = {}
         all_empty = True
-        
+
         for col_idx, header in enumerate(headers):
-            cell = ws.cell(row=row_idx, column=col_idx + 1)
-            value = cell.value
-            
-            if value is not None:
+            value = ws.cell(row=row_idx, column=col_idx + 1).value
+            # Strip whitespace on text values so queries match reliably
+            if isinstance(value, str):
+                value = value.strip()
+            if value is not None and value != "":
                 all_empty = False
-            
-            # Store the cell value
             row_data[header] = value
-            
-            # For color-status columns, extract fill color and map to status
-            if col_idx in color_col_indices:
-                color_hex = _extract_fill_color(cell)
-                status = _map_color_to_status(color_hex)
-                row_data[f"{header}_status"] = status
-                row_data[f"{header}_color"] = color_hex
-        
-        # Skip empty rows
+
+        # Skip rows where every cell is empty
         if all_empty:
             continue
-        
+
+        # Skip separator rows (e.g. "LINE BREAK" dividers), not real features
+        first_value = row_data.get(headers[0])
+        if isinstance(first_value, str) and first_value.upper() in SEPARATOR_MARKERS:
+            continue
+
+        # Normalized status, read from the text column (active source)
+        row_data["status"] = row_data.get(STATUS_COLUMN)
+
         rows.append(row_data)
-    
+
     wb.close()
     return rows
+
+
+def _read_headers(ws) -> list[str]:
+    """
+    Read row-1 headers. Drops trailing columns that have no header (blank spacer
+    columns). Any remaining blank header gets a positional name.
+    """
+    raw = []
+    for col in range(1, ws.max_column + 1):
+        val = ws.cell(row=1, column=col).value
+        raw.append(str(val).strip() if val is not None else None)
+    # Trim trailing empty-header columns
+    while raw and raw[-1] is None:
+        raw.pop()
+    # Name any remaining blank header by position
+    return [h if h is not None else f"Column_{i + 1}" for i, h in enumerate(raw)]
 
 
 def get_schema(filepath: str, sheet_name: str = "MSA Premium Detail") -> dict:
@@ -125,20 +135,16 @@ def get_schema(filepath: str, sheet_name: str = "MSA Premium Detail") -> dict:
         raise ValueError(f"Sheet '{sheet_name}' not found. Available: {wb.sheetnames}")
     
     ws = wb[sheet_name]
-    
-    headers = []
-    for col in range(1, ws.max_column + 1):
-        val = ws.cell(row=1, column=col).value
-        if val is not None:
-            headers.append(str(val).strip())
-    
+
+    headers = _read_headers(ws)
+
     wb.close()
-    
+
     return {
         "sheet_name": sheet_name,
         "columns": headers,
-        "color_status_columns": [h for h in headers if h in COLOR_STATUS_COLUMNS],
-        "color_mapping": {v: k for k, v in COLOR_STATUS_MAP.items() if k != "no_fill"},
+        "status_source": "text",
+        "status_column": STATUS_COLUMN,
         "row_count": None,  # Filled after parsing
     }
 
@@ -224,30 +230,24 @@ if __name__ == "__main__":
     # Step 1: Show schema
     schema = get_schema(filepath)
     print(f"\nColumns: {schema['columns']}")
-    print(f"Color-status columns: {schema['color_status_columns']}")
-    
+    print(f"Status source: {schema['status_source']} (column: {schema['status_column']})")
+
     # Steps 2-3: Parse data
     data = parse_sheet(filepath)
     print(f"\nRows parsed: {len(data)}")
-    
+
     # Show first 5 rows
     print(f"\nFirst 5 rows:")
     for row in data[:5]:
-        feature = row.get("Feature", "")
-        priority = row.get("Priority", "")
-        dri = row.get("DRI", "")
-        dt_status = row.get("Desktop Timeline_status", "")
-        mt_status = row.get("Mobile Timeline_status", "")
-        print(f"  {priority} | {feature:<40} | {dri:<20} | Desktop: {dt_status:<12} | Mobile: {mt_status}")
-    
-    # Show color distribution
-    print(f"\nDesktop status distribution:")
+        feature = str(row.get("Feature", "") or "")
+        priority = str(row.get("Priority", "") or "")
+        dri = str(row.get("DRI", "") or "")
+        status = str(row.get("status", "") or "")
+        print(f"  {priority:<4} | {feature:<40} | {dri:<20} | {status}")
+
+    # Show status distribution
     from collections import Counter
-    dt_counts = Counter(r.get("Desktop Timeline_status") for r in data)
-    for status, count in dt_counts.most_common():
-        print(f"  {status}: {count}")
-    
-    mt_counts = Counter(r.get("Mobile Timeline_status") for r in data)
-    print(f"\nMobile status distribution:")
-    for status, count in mt_counts.most_common():
+    counts = Counter(r.get("status") for r in data)
+    print(f"\nStatus distribution:")
+    for status, count in counts.most_common():
         print(f"  {status}: {count}")
